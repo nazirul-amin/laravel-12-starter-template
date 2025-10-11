@@ -9,12 +9,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use LaravelAndVueJS\Traits\LaravelPermissionToVueJS;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, HasRoles, HasUlids, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, HasRoles, HasUlids, LaravelPermissionToVueJS, Notifiable, TwoFactorAuthenticatable;
 
     /**
      * The attributes that are mass assignable.
