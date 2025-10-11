@@ -2,13 +2,13 @@
 
 namespace App\Console\Commands;
 
-use App\Models\User;
-use App\Mail\UserCreated;
 use App\Enums\RolesEnum;
+use App\Mail\UserCreated;
+use App\Models\User;
 use Illuminate\Console\Command;
-use Illuminate\Prompts\Prompt;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+
 use function Laravel\Prompts\form;
 
 class CreateUser extends Command
@@ -47,7 +47,7 @@ class CreateUser extends Command
             )
             ->confirm('Confirm?')
             ->submit();
-        
+
         $tempPassword = Str::random(12);
 
         $user = User::create([
@@ -56,7 +56,7 @@ class CreateUser extends Command
             'password' => $tempPassword,
         ]);
 
-        if (!empty($responses['roles'])) {
+        if (! empty($responses['roles'])) {
             $user->assignRole($responses['roles']);
         }
 

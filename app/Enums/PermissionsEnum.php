@@ -13,10 +13,10 @@ enum PermissionsEnum: string
     public function label(): string
     {
         return match ($this) {
-            static::CREATE_USER => 'Create User',
-            static::READ_USER => 'Read User',
-            static::UPDATE_USER => 'Update User',
-            static::DELETE_USER => 'Delete User',
+            self::CREATE_USER => 'Create User',
+            self::READ_USER => 'Read User',
+            self::UPDATE_USER => 'Update User',
+            self::DELETE_USER => 'Delete User',
         };
     }
 }
