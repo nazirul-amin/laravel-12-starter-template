@@ -2,17 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 use App\Mail\UserCreated;
 use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
-class UserController extends Controller
+class UserController extends BaseResourceController
 {
     /**
      * Display a listing of the resource.
@@ -20,7 +19,7 @@ class UserController extends Controller
     public function index()
     {
         Gate::authorize('viewAny', User::class);
-        $query = User::query()->select(['id', 'name', 'email', 'created_at', 'created_by']);
+        $query = User::query()->select(['id', 'name', 'email', 'created_by', 'created_at', 'updated_at']);
 
         $user = request()->user();
         if (! $user->hasRole('super-admin')) {
@@ -48,37 +47,29 @@ class UserController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
         Gate::authorize('create', User::class);
-        try {
-            $validated = $request->validate([
-                'name' => ['required', 'string', 'max:255'],
-                'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            ]);
+        $data = $request->validated();
+        $generatedPassword = Str::random(12);
+        $data['password'] = $generatedPassword;
+        $data['created_by'] = $request->user()->id;
 
-            $validated['password'] = Str::random(12);
-            $validated['created_by'] = $request->user()->id;
-
-            $user = DB::transaction(function () use ($validated) {
-                $user = User::create($validated);
-
+        return $this->attemptTransaction(
+            function () use ($data) {
+                $user = User::create($data);
                 $user->assignRole('user');
 
                 return $user;
-            });
-
-            Mail::to($user->email)->send(new UserCreated($user, $validated['password']));
-
-            return redirect()->route('users.index')->with('success', 'User created');
-        } catch (\Throwable $th) {
-            Log::error('Error creating user', [
-                'message' => $th->getMessage(),
-                'trace' => $th->getTraceAsString(),
-            ]);
-
-            return redirect()->back()->with('error', 'Failed to create user');
-        }
+            },
+            function ($user) use ($generatedPassword) {
+                Mail::to($user->email)->send(new UserCreated($user, $generatedPassword));
+            },
+            'users.index',
+            'User created',
+            'Failed to create user',
+            'Error creating user'
+        );
     }
 
     /**
@@ -100,28 +91,23 @@ class UserController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, User $user)
+    public function update(UpdateUserRequest $request, User $user)
     {
         Gate::authorize('update', $user);
-        try {
-            $validated = $request->validate([
-                'name' => ['required', 'string', 'max:255'],
-                'email' => ['required', 'email', 'max:255', 'unique:users,email,'.$user->id.',id'],
-            ]);
+        $data = $request->validated();
 
-            DB::transaction(function () use ($user, $validated) {
-                $user->update($validated);
-            });
+        return $this->attemptTransaction(
+            function () use ($user, $data) {
+                $user->update($data);
 
-            return redirect()->route('users.index')->with('success', 'User updated');
-        } catch (\Throwable $th) {
-            Log::error('Error updating user', [
-                'message' => $th->getMessage(),
-                'trace' => $th->getTraceAsString(),
-            ]);
-
-            return redirect()->back()->with('error', 'Failed to update user');
-        }
+                return $user;
+            },
+            null,
+            'users.index',
+            'User updated',
+            'Failed to update user',
+            'Error updating user'
+        );
     }
 
     /**
@@ -130,19 +116,18 @@ class UserController extends Controller
     public function destroy(User $user)
     {
         Gate::authorize('delete', $user);
-        try {
-            DB::transaction(function () use ($user) {
+
+        return $this->attemptTransaction(
+            function () use ($user) {
                 $user->delete();
-            });
 
-            return redirect()->route('users.index')->with('success', 'User deleted');
-        } catch (\Throwable $th) {
-            Log::error('Error deleting user', [
-                'message' => $th->getMessage(),
-                'trace' => $th->getTraceAsString(),
-            ]);
-
-            return redirect()->back()->with('error', 'Failed to delete user');
-        }
+                return true;
+            },
+            null,
+            'users.index',
+            'User deleted',
+            'Failed to delete user',
+            'Error deleting user'
+        );
     }
 }

@@ -1,5 +1,16 @@
 <script setup lang="ts">
 import { DataTable, type ColumnDef } from '@/components/data-table';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -14,17 +25,6 @@ import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { BreadcrumbItem } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import {
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogOverlay,
-    AlertDialogPortal,
-    AlertDialogRoot,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from 'reka-ui';
 import { computed, ref } from 'vue';
 
 // Types
@@ -32,8 +32,9 @@ interface UserRow {
     id: string;
     name: string;
     email: string;
-    created_at: string;
     created_by?: string | null;
+    created_at: string;
+    updated_at: string;
 }
 
 // Inertia props
@@ -52,10 +53,22 @@ const columns: ColumnDef[] = [
     { key: 'name', header: 'Name', sortable: true },
     { key: 'email', header: 'Email', sortable: true },
     {
+        key: 'created_by',
+        header: 'Created by',
+        sortable: true,
+        accessor: (row: UserRow) => row.created_by ?? 'System',
+    },
+    {
         key: 'created_at',
         header: 'Created',
         sortable: true,
-        accessor: (r: UserRow) => new Date(r.created_at).toLocaleString(),
+        accessor: (row: UserRow) => new Date(row.created_at).toLocaleString(),
+    },
+    {
+        key: 'updated_at',
+        header: 'Updated',
+        sortable: true,
+        accessor: (row: UserRow) => new Date(row.updated_at).toLocaleString(),
     },
 ];
 
@@ -142,54 +155,43 @@ async function confirmDelete() {
                             @click="startEdit(row)"
                             >Edit</Button
                         >
-                        <AlertDialogRoot
-                            v-if="is('super-admin | admin')"
-                            :open="deleting?.id === row.id"
-                            @update:open="
-                                (v: any) => (deleting = v ? row : null)
-                            "
-                        >
+                        <AlertDialog v-if="is('super-admin | admin')">
                             <AlertDialogTrigger as-child>
-                                <Button size="sm" variant="destructive"
+                                <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    @click="deleting = row"
                                     >Delete</Button
                                 >
                             </AlertDialogTrigger>
-                            <AlertDialogPortal>
-                                <AlertDialogOverlay
-                                    class="fixed inset-0 z-50 bg-black/40"
-                                />
-                                <AlertDialogContent
-                                    class="fixed top-1/2 left-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background p-6 shadow-lg"
-                                >
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
                                     <AlertDialogTitle
-                                        class="text-lg font-semibold"
                                         >Delete user?</AlertDialogTitle
                                     >
-                                    <AlertDialogDescription
-                                        class="text-sm text-muted-foreground"
-                                    >
+                                    <AlertDialogDescription>
                                         This action cannot be undone. This will
                                         permanently delete the user.
                                     </AlertDialogDescription>
-                                    <div class="mt-6 flex justify-end gap-2">
-                                        <AlertDialogCancel as-child>
-                                            <Button
-                                                variant="outline"
-                                                @click="deleting = null"
-                                                >Cancel</Button
-                                            >
-                                        </AlertDialogCancel>
-                                        <AlertDialogAction as-child>
-                                            <Button
-                                                variant="destructive"
-                                                @click="confirmDelete"
-                                                >Delete</Button
-                                            >
-                                        </AlertDialogAction>
-                                    </div>
-                                </AlertDialogContent>
-                            </AlertDialogPortal>
-                        </AlertDialogRoot>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel as-child>
+                                        <Button
+                                            variant="outline"
+                                            @click="deleting = null"
+                                            >Cancel</Button
+                                        >
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction as-child>
+                                        <Button
+                                            variant="destructive"
+                                            @click="confirmDelete"
+                                            >Delete</Button
+                                        >
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </div>
                 </template>
             </DataTable>
